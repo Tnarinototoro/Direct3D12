@@ -33,10 +33,15 @@ public:
 
 private:
     static const UINT FrameCount = 4;
+    static const UINT TextureWidth = 256;
+    static const UINT TextureHeight = 256;
+    static const UINT TexturePixelSize = 4;    // The number of bytes used to represent a pixel in the texture.
+    static const UINT nSampleMaxCnt = 5;
+   
     struct Vertex
     {
         XMFLOAT3 position;
-        XMFLOAT4 color;
+        XMFLOAT2 uv;
 
     };
     struct SceneConstantBuffer
@@ -75,9 +80,11 @@ private:
     ComPtr<ID3D12GraphicsCommandList> m_commandList;
     ComPtr<ID3D12GraphicsCommandList> m_bundle;
     //Heaps on GPU
+    //rendering target view heap
     ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
+    //cbv heap can also be used as cbv_srv_uav_....
     ComPtr<ID3D12DescriptorHeap> m_cbvHeap;
-    
+    ComPtr<ID3D12DescriptorHeap> m_SamplersHeap;
     //pipeline state object
     ComPtr<ID3D12PipelineState> m_pipelineState;
     
@@ -88,6 +95,7 @@ private:
 
     //descriptor size
     UINT m_rtvDescriptorSize;
+    UINT m_samplerDescriptorSize;
 
 
 
@@ -105,6 +113,7 @@ private:
     ComPtr<ID3D12Resource> m_vertexBuffer;
     D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
     ComPtr<ID3D12Resource> m_constantBuffer;
+    ComPtr<ID3D12Resource> m_texture;
     SceneConstantBuffer m_constantBufferData;
     UINT8* m_pCbvDataBegin;
 
@@ -113,4 +122,5 @@ private:
     void PopulateCommandList();
     void WaitForGPU();
     void MoveToNextFrame();
+    std::vector<UINT8> GenerateTextureData();
 };
