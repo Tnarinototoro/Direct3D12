@@ -21,7 +21,7 @@ struct PSInput
     float2 uv : TEXCOORD;
 };
 
-Texture2D g_texture : register(t0);
+Texture2D g_texture : register(t1);
 SamplerState g_sampler : register(s0);
 
 PSInput VSMain(float4 position : POSITION, float2 uv : TEXCOORD)
