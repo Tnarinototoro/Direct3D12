@@ -12,6 +12,14 @@
 #pragma once
 
 #include "DXSample.h"
+#include <wincodec.h>
+
+
+
+
+
+
+
 
 using namespace DirectX;
 // Note that while ComPtr is used to manage the lifetime of resources on the CPU,
@@ -33,9 +41,10 @@ public:
 
 private:
     static const UINT FrameCount = 4;
-    static const UINT TextureWidth = 256;
-    static const UINT TextureHeight = 256;
-    static const UINT TexturePixelSize = 4;    // The number of bytes used to represent a pixel in the texture.
+    UINT m_TextureWidth;
+    UINT m_TextureHeight;
+    UINT m_TexturePixelSize;    // The number of bytes used to represent a pixel in the texture.
+    UINT m_PicRowPitch;
     static const UINT nSampleMaxCnt = 5;
    
     struct Vertex
