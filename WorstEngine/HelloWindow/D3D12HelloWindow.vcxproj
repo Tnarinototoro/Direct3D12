@@ -114,6 +114,7 @@
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="TextureDataLoader.h" />
     <ClInclude Include="Win32Application.h" />
     <ClInclude Include="D3DApp.h" />
     <ClInclude Include="d3dx12.h" />
@@ -122,6 +123,7 @@
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="TextureDataLoader.cpp" />
     <ClCompile Include="Win32Application.cpp" />
     <ClCompile Include="D3DApp.cpp" />
     <ClCompile Include="DXSample.cpp" />

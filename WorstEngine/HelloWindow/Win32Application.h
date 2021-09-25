@@ -10,7 +10,7 @@
 //*********************************************************
 
 #pragma once
-
+#include "stdafx.h"
 #include "DXSample.h"
 
 class DXSample;

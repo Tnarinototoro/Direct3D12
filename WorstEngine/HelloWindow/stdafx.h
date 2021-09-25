@@ -30,17 +30,22 @@
 #include <string>
 #include <wrl.h>
 #include <shellapi.h>
-
+#include <wincodec.h>
 #pragma comment(lib, "D3DCompiler.lib")
 #pragma comment(lib, "dxguid.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3d12.lib")
 
+using namespace DirectX;
+using Microsoft::WRL::ComPtr;
 //新定义的宏用于上取整除法
 #define GRS_UPPER_DIV(A,B) ((UINT)(((A)+((B)-1))/(B)))
 
 //更简洁的向上边界对齐算法 内存管理中常用 请记住
 #define GRS_UPPER(A,B) ((UINT)(((A)+((B)-1))&~(B - 1)))
+
+
+
 struct WICTranslate
 {
 	GUID wic;

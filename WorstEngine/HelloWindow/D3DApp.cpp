@@ -12,31 +12,6 @@
 #include "stdafx.h"
 #include "D3DApp.h"
 
-bool GetTargetPixelFormat(const GUID* pSourceFormat, GUID* pTargetFormat)
-{//查表确定兼容的最接近格式是哪个
-    *pTargetFormat = *pSourceFormat;
-    for (size_t i = 0; i < _countof(g_WICConvert); ++i)
-    {
-        if (InlineIsEqualGUID(g_WICConvert[i].source, *pSourceFormat))
-        {
-            *pTargetFormat = g_WICConvert[i].target;
-            return true;
-        }
-    }
-    return false;
-}
-
-DXGI_FORMAT GetDXGIFormatFromPixelFormat(const GUID* pPixelFormat)
-{//查表确定最终对应的DXGI格式是哪一个
-    for (size_t i = 0; i < _countof(g_WICFormats); ++i)
-    {
-        if (InlineIsEqualGUID(g_WICFormats[i].wic, *pPixelFormat))
-        {
-            return g_WICFormats[i].format;
-        }
-    }
-    return DXGI_FORMAT_UNKNOWN;
-}
 
 
 D3DApp::D3DApp(UINT width, UINT height, std::wstring name) :
@@ -45,8 +20,18 @@ D3DApp::D3DApp(UINT width, UINT height, std::wstring name) :
     m_rtvDescriptorSize(0),
     m_viewportRect(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
     m_scissorRect(0,0,static_cast<LONG>(width),static_cast<LONG>(height)),
-    m_fenceValues{}
+    m_fenceValues{},
+    Eye(XMVectorSet(0.0f, 0.0f, -100.0f, 0.0f)),
+    Up(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)),
+    At(XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f)),
+    fPalstance(10.0f * XM_PI / 180.0f),
+    szMVPBuffer(GRS_UPPER_DIV(sizeof(MVP_BUFFER), 256) * 256),
+    n64tmFrameStart(::GetTickCount64()),
+    dModelRotationYAngle(0.0f),
+    dModelRotationXAngle(0.0f),
+    dModelRotationZAngle(0.0f)
 {
+    n64tmCurrent = n64tmFrameStart;
 }
 
 void D3DApp::OnInit()
@@ -309,7 +294,10 @@ void D3DApp::LoadAssets()
                           0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 
                           { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,0,
-                          12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+                          12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+
+                          { "NORMAL", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 
+                          20, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 
                       };
 
@@ -351,28 +339,80 @@ void D3DApp::LoadAssets()
 
     }
 
-        // Create the vertex buffer.
+        // Create the vertex buffer. and index buffer
 
     {
 
         // Define the geometry for a triangle.
-
-        Vertex triangleVertices[] =
-
-        {
-
-            { { 0.0f, 0.25f * m_aspectRatio, 0.0f }, { 0.5f,0.0f } },
-
-            { { 0.25f, -0.25f * m_aspectRatio, 0.0f }, { 1.0f, 1.0f} },
-
-            { { -0.25f, -0.25f * m_aspectRatio, 0.0f }, { 0.0f, 1.0f} }
-
+        float fBoxSize = 20.0f;
+        float fTCMax = 3.0f;
+        Vertex stTriangleVertices[] = {
+            { {-1.0f * fBoxSize,  1.0f * fBoxSize, -1.0f * fBoxSize}, {0.0f * fTCMax, 0.0f * fTCMax}, {0.0f,  0.0f, -1.0f} },
+            { {1.0f * fBoxSize,  1.0f * fBoxSize, -1.0f * fBoxSize}, {1.0f * fTCMax, 0.0f * fTCMax},  {0.0f,  0.0f, -1.0f} },
+            { {-1.0f * fBoxSize, -1.0f * fBoxSize, -1.0f * fBoxSize}, {0.0f * fTCMax, 1.0f * fTCMax}, {0.0f,  0.0f, -1.0f} },
+            { {-1.0f * fBoxSize, -1.0f * fBoxSize, -1.0f * fBoxSize}, {0.0f * fTCMax, 1.0f * fTCMax}, {0.0f,  0.0f, -1.0f} },
+            { {1.0f * fBoxSize,  1.0f * fBoxSize, -1.0f * fBoxSize}, {1.0f * fTCMax, 0.0f * fTCMax},  {0.0f, 0.0f, -1.0f} },
+            { {1.0f * fBoxSize, -1.0f * fBoxSize, -1.0f * fBoxSize}, {1.0f * fTCMax, 1.0f * fTCMax},  {0.0f,  0.0f, -1.0f} },
+            { {1.0f * fBoxSize,  1.0f * fBoxSize, -1.0f * fBoxSize}, {0.0f * fTCMax, 0.0f * fTCMax},  {1.0f,  0.0f,  0.0f} },
+            { {1.0f * fBoxSize,  1.0f * fBoxSize,  1.0f * fBoxSize}, {1.0f * fTCMax, 0.0f * fTCMax},  {1.0f,  0.0f,  0.0f} },
+            { {1.0f * fBoxSize, -1.0f * fBoxSize, -1.0f * fBoxSize}, {0.0f * fTCMax, 1.0f * fTCMax},  {1.0f,  0.0f,  0.0f} },
+            { {1.0f * fBoxSize, -1.0f * fBoxSize, -1.0f * fBoxSize}, {0.0f * fTCMax, 1.0f * fTCMax},  {1.0f,  0.0f,  0.0f} },
+            { {1.0f * fBoxSize,  1.0f * fBoxSize,  1.0f * fBoxSize}, {1.0f * fTCMax, 0.0f * fTCMax},  {1.0f,  0.0f,  0.0f} },
+            { {1.0f * fBoxSize, -1.0f * fBoxSize,  1.0f * fBoxSize}, {1.0f * fTCMax, 1.0f * fTCMax},  {1.0f,  0.0f,  0.0f} },
+            { {1.0f * fBoxSize,  1.0f * fBoxSize,  1.0f * fBoxSize}, {0.0f * fTCMax, 0.0f * fTCMax},  {0.0f,  0.0f,  1.0f} },
+            { {-1.0f * fBoxSize,  1.0f * fBoxSize,  1.0f * fBoxSize}, {1.0f * fTCMax, 0.0f * fTCMax},  {0.0f,  0.0f,  1.0f} },
+            { {1.0f * fBoxSize, -1.0f * fBoxSize,  1.0f * fBoxSize}, {0.0f * fTCMax, 1.0f * fTCMax}, {0.0f,  0.0f,  1.0f} },
+            { {1.0f * fBoxSize, -1.0f * fBoxSize,  1.0f * fBoxSize}, {0.0f * fTCMax, 1.0f * fTCMax},  {0.0f,  0.0f,  1.0f} },
+            { {-1.0f * fBoxSize,  1.0f * fBoxSize,  1.0f * fBoxSize}, {1.0f * fTCMax, 0.0f * fTCMax},  {0.0f,  0.0f,  1.0f} },
+            { {-1.0f * fBoxSize, -1.0f * fBoxSize,  1.0f * fBoxSize}, {1.0f * fTCMax, 1.0f * fTCMax},  {0.0f,  0.0f,  1.0f} },
+            { {-1.0f * fBoxSize,  1.0f * fBoxSize,  1.0f * fBoxSize}, {0.0f * fTCMax, 0.0f * fTCMax}, {-1.0f,  0.0f,  0.0f} },
+            { {-1.0f * fBoxSize,  1.0f * fBoxSize, -1.0f * fBoxSize}, {1.0f * fTCMax, 0.0f * fTCMax}, {-1.0f,  0.0f,  0.0f} },
+            { {-1.0f * fBoxSize, -1.0f * fBoxSize,  1.0f * fBoxSize}, {0.0f * fTCMax, 1.0f * fTCMax}, {-1.0f,  0.0f,  0.0f} },
+            { {-1.0f * fBoxSize, -1.0f * fBoxSize,  1.0f * fBoxSize}, {0.0f * fTCMax, 1.0f * fTCMax}, {-1.0f,  0.0f,  0.0f} },
+            { {-1.0f * fBoxSize,  1.0f * fBoxSize, -1.0f * fBoxSize}, {1.0f * fTCMax, 0.0f * fTCMax}, {-1.0f,  0.0f,  0.0f} },
+            { {-1.0f * fBoxSize, -1.0f * fBoxSize, -1.0f * fBoxSize}, {1.0f * fTCMax, 1.0f * fTCMax}, {-1.0f,  0.0f,  0.0f} },
+            { {-1.0f * fBoxSize,  1.0f * fBoxSize,  1.0f * fBoxSize}, {0.0f * fTCMax, 0.0f * fTCMax},  {0.0f,  1.0f,  0.0f} },
+            { {1.0f * fBoxSize,  1.0f * fBoxSize,  1.0f * fBoxSize}, {1.0f * fTCMax, 0.0f * fTCMax},  {0.0f,  1.0f,  0.0f} },
+            { {-1.0f * fBoxSize,  1.0f * fBoxSize, -1.0f * fBoxSize}, {0.0f * fTCMax, 1.0f * fTCMax},  {0.0f,  1.0f,  0.0f} },
+            { {-1.0f * fBoxSize,  1.0f * fBoxSize, -1.0f * fBoxSize}, {0.0f * fTCMax, 1.0f * fTCMax},  {0.0f,  1.0f,  0.0f} },
+            { {1.0f * fBoxSize,  1.0f * fBoxSize,  1.0f * fBoxSize}, {1.0f * fTCMax, 0.0f * fTCMax},  {0.0f,  1.0f,  0.0f} },
+            { {1.0f * fBoxSize,  1.0f * fBoxSize, -1.0f * fBoxSize}, {1.0f * fTCMax, 1.0f * fTCMax},  {0.0f,  1.0f,  0.0f }},
+            { {-1.0f * fBoxSize, -1.0f * fBoxSize, -1.0f * fBoxSize}, {0.0f * fTCMax, 0.0f * fTCMax},  {0.0f, -1.0f,  0.0f} },
+            { {1.0f * fBoxSize, -1.0f * fBoxSize, -1.0f * fBoxSize}, {1.0f * fTCMax, 0.0f * fTCMax},  {0.0f, -1.0f,  0.0f} },
+            { {-1.0f * fBoxSize, -1.0f * fBoxSize,  1.0f * fBoxSize}, {0.0f * fTCMax, 1.0f * fTCMax},  {0.0f, -1.0f,  0.0f} },
+            { {-1.0f * fBoxSize, -1.0f * fBoxSize,  1.0f * fBoxSize}, {0.0f * fTCMax, 1.0f * fTCMax},  {0.0f, -1.0f,  0.0f} },
+            { {1.0f * fBoxSize, -1.0f * fBoxSize, -1.0f * fBoxSize}, {1.0f * fTCMax, 0.0f * fTCMax},  {0.0f, -1.0f,  0.0f} },
+            { {1.0f * fBoxSize, -1.0f * fBoxSize,  1.0f * fBoxSize}, {1.0f * fTCMax, 1.0f * fTCMax},  {0.0f, -1.0f,  0.0f} },
         };
 
+      
+        const UINT vertexBufferSize = sizeof(stTriangleVertices);
 
+        UINT32 pBoxIndices[] 
+            = {
+            0,1,2,
+            3,4,5,
 
-        const UINT vertexBufferSize = sizeof(triangleVertices);
+            6,7,8,
+            9,10,11,
 
+            12,13,14,
+            15,16,17,
+
+            18,19,20,
+            21,22,23,
+
+            24,25,26,
+            27,28,29,
+
+            30,31,32,
+            33,34,35,
+        };
+
+       
+       
+        const UINT nszIndexBuffer = sizeof(pBoxIndices);
+        m_nInstance = _countof(pBoxIndices);
         //这里的创建committed resource就是在创建顶点缓存, D3D12_HEAP_TYPE_UPLOAD其实不太适合这种静态数据, 这里只是为了代码简洁
 
         ThrowIfFailed(m_device->CreateCommittedResource(
@@ -384,7 +424,6 @@ void D3DApp::LoadAssets()
             & CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
 
             D3D12_RESOURCE_STATE_GENERIC_READ,
-
             nullptr,
 
             IID_PPV_ARGS(&m_vertexBuffer)));
@@ -405,7 +444,7 @@ void D3DApp::LoadAssets()
 
         //然后直接用pVertexDataBegin的地址来进行拷贝
 
-        memcpy(pVertexDataBegin, triangleVertices, sizeof(triangleVertices));
+        memcpy(pVertexDataBegin, stTriangleVertices, sizeof(stTriangleVertices));
 
         //搞完之后unlock
 
@@ -423,13 +462,37 @@ void D3DApp::LoadAssets()
 
         m_vertexBufferView.SizeInBytes = vertexBufferSize;
 
+        //create index buffer
+
+        ThrowIfFailed(m_device->CreateCommittedResource(
+
+            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+
+            D3D12_HEAP_FLAG_NONE,
+
+            & CD3DX12_RESOURCE_DESC::Buffer(nszIndexBuffer),
+
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+
+            nullptr,
+
+            IID_PPV_ARGS(&m_IndexBuffer)));
+
+        UINT8* pIndexDataBegin = nullptr;
+        ThrowIfFailed(m_IndexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pIndexDataBegin)));
+        memcpy(pIndexDataBegin, pBoxIndices, nszIndexBuffer);
+        m_IndexBuffer->Unmap(0, nullptr);
+
+        m_IndexBufferView.BufferLocation = m_IndexBuffer->GetGPUVirtualAddress();
+        m_IndexBufferView.Format = DXGI_FORMAT_R32_UINT;
+        m_IndexBufferView.SizeInBytes = nszIndexBuffer;
     }
 
 
     // Create the main command list.
     ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocators[m_frameIndex].Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
 
-    //Create command list
+    //Create command bundle list
     {
         ThrowIfFailed(
             m_device->CreateCommandList(
@@ -440,221 +503,28 @@ void D3DApp::LoadAssets()
                 IID_PPV_ARGS(&m_bundle)));
 
 
-        //m_bundle->SetGraphicsRootSignature(m_rootSignature.Get());
+       
         m_bundle->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         m_bundle->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-
-        m_bundle->DrawInstanced(3, 1, 0, 0);
+        m_bundle->IASetIndexBuffer(&m_IndexBufferView);
+        m_bundle->DrawInstanced(m_nInstance, 1, 0, 0);
 
         ThrowIfFailed(m_bundle->Close());
     }
 
 
-    // Command lists are created in the recording state, but there is nothing
-    // to record yet. The main loop expects it to be closed, so close it now.
-   // ThrowIfFailed(m_commandList->Close());
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-    ComPtr<IWICImagingFactory>			pIWICFactory;
-    ComPtr<IWICBitmapDecoder>			pIWICDecoder;
-    ComPtr<IWICBitmapFrameDecode>		pIWICFrame;
-    ComPtr<IWICBitmapSource>			pIBMP;
-    DXGI_FORMAT stTextureFormat = DXGI_FORMAT_UNKNOWN;
-    ::CoInitialize(nullptr);
-      //get the picture data
+    //create the texture
     {
-
-        
-        //---------------------------------------------------------------------------------------------
-        //使用纯COM方式创建WIC类厂对象，也是调用WIC第一步要做的事情
-        ThrowIfFailed(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pIWICFactory)));
-
-        //使用WIC类厂对象接口加载纹理图片，并得到一个WIC解码器对象接口，图片信息就在这个接口代表的对象中了
-
-        ThrowIfFailed(pIWICFactory->CreateDecoderFromFilename(
-            GetAssetFullPath(L"flower.jpg").c_str(),              // 文件名
-            NULL,                            // 不指定解码器，使用默认
-            GENERIC_READ,                    // 访问权限
-            WICDecodeMetadataCacheOnDemand,  // 若需要就缓冲数据 
-            &pIWICDecoder                    // 解码器对象
-        ));
-
-        // 获取第一帧图片(因为GIF等格式文件可能会有多帧图片，其他的格式一般只有一帧图片)
-        // 实际解析出来的往往是位图格式数据
-        ThrowIfFailed(pIWICDecoder->GetFrame(0, &pIWICFrame));
-
-        WICPixelFormatGUID wpf = {};
-        //获取WIC图片格式
-        ThrowIfFailed(pIWICFrame->GetPixelFormat(&wpf));
-        GUID tgFormat = {};
-
-        //通过第一道转换之后获取DXGI的等价格式
-        if (GetTargetPixelFormat(&wpf, &tgFormat))
-        {
-            stTextureFormat = GetDXGIFormatFromPixelFormat(&tgFormat);
-        }
-
-        if (DXGI_FORMAT_UNKNOWN == stTextureFormat)
-        {// 不支持的图片格式 目前退出了事 
-         // 一般 在实际的引擎当中都会提供纹理格式转换工具，
-         // 图片都需要提前转换好，所以不会出现不支持的现象
-            throw HrException(S_FALSE);
-        }
-
-        if (!InlineIsEqualGUID(wpf, tgFormat))
-        {// 这个判断很重要，如果原WIC格式不是直接能转换为DXGI格式的图片时
-         // 我们需要做的就是转换图片格式为能够直接对应DXGI格式的形式
-            //创建图片格式转换器
-            ComPtr<IWICFormatConverter> pIConverter;
-            ThrowIfFailed(pIWICFactory->CreateFormatConverter(&pIConverter));
-
-            //初始化一个图片转换器，实际也就是将图片数据进行了格式转换
-            ThrowIfFailed(pIConverter->Initialize(
-                pIWICFrame.Get(),                // 输入原图片数据
-                tgFormat,						 // 指定待转换的目标格式
-                WICBitmapDitherTypeNone,         // 指定位图是否有调色板，现代都是真彩位图，不用调色板，所以为None
-                NULL,                            // 指定调色板指针
-                0.f,                             // 指定Alpha阀值
-                WICBitmapPaletteTypeCustom       // 调色板类型，实际没有使用，所以指定为Custom
-            ));
-            // 调用QueryInterface方法获得对象的位图数据源接口
-            ThrowIfFailed(pIConverter.As(&pIBMP));
-        }
-        else
-        {
-            //图片数据格式不需要转换，直接获取其位图数据源接口
-            ThrowIfFailed(pIWICFrame.As(&pIBMP));
-        }
-        //获得图片大小（单位：像素）
-        ThrowIfFailed(pIBMP->GetSize(&m_TextureWidth, &m_TextureHeight));
-
-        //获取图片像素的位大小的BPP（Bits Per Pixel）信息，用以计算图片行数据的真实大小（单位：字节）
-        ComPtr<IWICComponentInfo> pIWICmntinfo;
-        ThrowIfFailed(pIWICFactory->CreateComponentInfo(tgFormat, pIWICmntinfo.GetAddressOf()));
-
-        WICComponentType type;
-        ThrowIfFailed(pIWICmntinfo->GetComponentType(&type));
-
-        if (type != WICPixelFormat)
-        {
-            throw HrException(S_FALSE);
-        }
-
-        ComPtr<IWICPixelFormatInfo> pIWICPixelinfo;
-        ThrowIfFailed(pIWICmntinfo.As(&pIWICPixelinfo));
-
-        // 到这里终于可以得到BPP了，这也是我看的比较吐血的地方，为了BPP居然饶了这么多环节
-        ThrowIfFailed(pIWICPixelinfo->GetBitsPerPixel(&m_TexturePixelSize));
-
-        // 计算图片实际的行大小（单位：字节），这里使用了一个上取整除法即（A+B-1）/B ，
-        // 这曾经被传说是微软的面试题,希望你已经对它了如指掌
-        m_PicRowPitch = GRS_UPPER_DIV(uint64_t(m_TextureWidth) * uint64_t(m_TexturePixelSize), 8);
+        Loader = new TextureDataLoader(0, 1);
+        Loader->ReadTheTextureDataFromFile(L"flower.jpg");
+        Loader->UploadAndConnectResource(m_device.Get(), m_commandList.Get(), m_cbvHeap.Get(), m_commandQueue.Get());
     }
+    
 
 
 
-
-
-
-
-
-
-
-    ComPtr<ID3D12Resource> textureUploadHeap;
-
-    // Create the texture.
-    {
-        // Describe and create a Texture2D.
-        D3D12_RESOURCE_DESC textureDesc = {};
-        textureDesc.MipLevels = 1;
-        textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        textureDesc.Width = m_TextureWidth;
-        textureDesc.Height = m_TextureHeight;
-        textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-        textureDesc.DepthOrArraySize = 1;
-        textureDesc.SampleDesc.Count = 1;
-        textureDesc.SampleDesc.Quality = 0;
-        textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-
-        ThrowIfFailed(m_device->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-            D3D12_HEAP_FLAG_NONE,
-            &textureDesc,
-            D3D12_RESOURCE_STATE_COPY_DEST,
-            nullptr,
-            IID_PPV_ARGS(&m_texture)));
-
-        const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_texture.Get(), 0, 1);
-
-        // Create the GPU upload buffer.
-        ThrowIfFailed(m_device->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-            D3D12_HEAP_FLAG_NONE,
-            &CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-            IID_PPV_ARGS(&textureUploadHeap)));
-
-        // Copy data to the intermediate upload heap and then schedule a copy 
-        // from the upload heap to the Texture2D.
-        //std::vector<UINT8> texture = GenerateTextureData();
-
-
-
-
-        //按照资源缓冲大小来分配实际图片数据存储的内存大小
-        void* pbPicData = ::HeapAlloc(::GetProcessHeap(), HEAP_ZERO_MEMORY, uploadBufferSize);
-        if (nullptr == pbPicData)
-        {
-            throw HrException(HRESULT_FROM_WIN32(GetLastError()));
-        }
-
-        //从图片中读取出数据
-        ThrowIfFailed(pIBMP->CopyPixels(nullptr
-            , m_PicRowPitch
-            , static_cast<UINT>(m_PicRowPitch * m_TextureHeight)   //注意这里才是图片数据真实的大小，这个值通常小于缓冲的大小
-            , reinterpret_cast<BYTE*>(pbPicData)));
-
-
-
-
-        D3D12_SUBRESOURCE_DATA textureData = {};
-        textureData.pData = reinterpret_cast<BYTE*>(pbPicData);
-        textureData.RowPitch = m_PicRowPitch;
-        textureData.SlicePitch = textureData.RowPitch * m_TextureHeight;
-
-        UpdateSubresources(m_commandList.Get(), m_texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
-        m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
-
-        // Describe and create a SRV for the texture.
-        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        srvDesc.Format = textureDesc.Format;
-        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-        srvDesc.Texture2D.MipLevels = 1;
-        CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle(m_cbvHeap->GetCPUDescriptorHandleForHeapStart());
-        cbvHandle.Offset(1, m_rtvDescriptorSize);
-        m_device->CreateShaderResourceView(m_texture.Get(), &srvDesc, cbvHandle);
-    }
-
-    // Close the command list and execute it to begin the initial GPU setup.
-    ThrowIfFailed(m_commandList->Close());
-    ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
-    m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-   
     //create a lot of samplers
     {
         CD3DX12_CPU_DESCRIPTOR_HANDLE hSamplerHeap(m_SamplersHeap->GetCPUDescriptorHandleForHeapStart());
@@ -713,75 +583,46 @@ void D3DApp::LoadAssets()
     }
 
 
-
     // create const buffer
     {
-
-        const UINT constantBufferSize = sizeof(SceneConstantBuffer);    // CB size is required to be 256-byte aligned.
-
-
-
+       
+           // CB size is required to be 256-byte aligned.
         ThrowIfFailed(m_device->CreateCommittedResource(
 
             &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 
             D3D12_HEAP_FLAG_NONE,
 
-            &CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize),
+            &CD3DX12_RESOURCE_DESC::Buffer(szMVPBuffer),
 
             D3D12_RESOURCE_STATE_GENERIC_READ,
 
             nullptr,
 
-            IID_PPV_ARGS(&m_constantBuffer)));
+            IID_PPV_ARGS(&m_constantBufferUpload)));
+        ThrowIfFailed(m_constantBufferUpload->Map(0, nullptr, reinterpret_cast<void**>(&MVPBufferData)));
 
 
+        
+
+
+
+        
+
+    //把resource的buffer的指针给m_pCbvDataBegin赋值，然后把m_constantBufferData的值赋给资源
+
+      
 
         // Describe and create a constant buffer view.
 
         D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
 
-        cbvDesc.BufferLocation = m_constantBuffer->GetGPUVirtualAddress();
+        cbvDesc.BufferLocation = m_constantBufferUpload->GetGPUVirtualAddress();
 
-        cbvDesc.SizeInBytes = constantBufferSize;
+        cbvDesc.SizeInBytes = static_cast<UINT>(szMVPBuffer);
 
         m_device->CreateConstantBufferView(&cbvDesc, m_cbvHeap->GetCPUDescriptorHandleForHeapStart());
-
-
-
-        // Map and initialize the constant buffer. We don't unmap this until the
-
-        // app closes. Keeping things mapped for the lifetime of the resource is okay.
-
-        CD3DX12_RANGE readRange(0, 0);        
-        // We do not intend to read from this resource on the CPU.
-
-    //把resource的buffer的指针给m_pCbvDataBegin赋值，然后把m_constantBufferData的值赋给资源
-
-        ThrowIfFailed(m_constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_pCbvDataBegin)));
-
-        memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
-
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     // Create synchronization objects.
     {
@@ -801,31 +642,44 @@ void D3DApp::LoadAssets()
 // Update frame-based values.
 void D3DApp::OnUpdate()
 {
-    const float translationSpeed = 0.005f;
+    n64tmCurrent = ::GetTickCount();
+    //计算旋转的角度：旋转角度(弧度) = 时间(秒) * 角速度(弧度/秒)
+    //下面这句代码相当于经典游戏消息循环中的OnUpdate函数中需要做的事情
+    dModelRotationYAngle += ((n64tmCurrent - n64tmFrameStart) / 1000.0f) * fPalstance*10;
+    dModelRotationXAngle += ((n64tmCurrent - n64tmFrameStart) / 1000.0f) * fPalstance * 10;
+    dModelRotationZAngle += ((n64tmCurrent - n64tmFrameStart) / 1000.0f) * fPalstance * 10;
+    n64tmFrameStart = n64tmCurrent;
+    //MessageBox(0, std::to_wstring(dModelRotationYAngle).c_str(), L"", 0);
 
-    const float offsetBounds = 1.25f;
-    
-
-
-    m_constantBufferData.offset.x += translationSpeed;
-    m_constantBufferData.offset.y += translationSpeed;
-    if (m_constantBufferData.offset.x > offsetBounds)
-
+    //旋转角度是2PI周期的倍数，去掉周期数，只留下相对0弧度开始的小于2PI的弧度即可
+    if (dModelRotationYAngle > XM_2PI)
     {
-
-        m_constantBufferData.offset.x = -offsetBounds;
-
+        dModelRotationYAngle = fmod(dModelRotationYAngle, XM_2PI);
     }
-    if (m_constantBufferData.offset.y > offsetBounds)
-
+    if (dModelRotationXAngle > XM_2PI)
     {
-
-        m_constantBufferData.offset.y = -offsetBounds;
-
+        dModelRotationXAngle = fmod(dModelRotationXAngle, XM_2PI);
+    }
+    if (dModelRotationZAngle > XM_2PI)
+    {
+        dModelRotationZAngle = fmod(dModelRotationZAngle, XM_2PI);
     }
 
+    //模型矩阵 model
+    XMMATRIX xmRot = XMMatrixMultiply(XMMatrixRotationY(static_cast<float>(dModelRotationYAngle)), XMMatrixRotationX(static_cast<float>(dModelRotationXAngle)));
+    xmRot = XMMatrixMultiply(xmRot, XMMatrixRotationZ(static_cast<float>(dModelRotationZAngle)));
+    //计算 模型矩阵 model * 视矩阵 view
+    XMMATRIX view = XMMatrixLookAtLH(Eye, At, Up);
 
-    memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
+    //投影矩阵 projection
+    XMMATRIX pro = XMMatrixPerspectiveFovLH(XM_PIDIV4, (FLOAT)m_width / (FLOAT)m_height, 0.1f, 1000.0f);
+    MVPBufferData->World = xmRot;
+    MVPBufferData->View = view;
+    MVPBufferData->Pro = pro;
+    //XMStoreFloat4x4(&(MVPBufferData->World), xmRot);
+    /*XMStoreFloat4x4(&(MVPBufferData->View), view);
+    XMStoreFloat4x4(&(MVPBufferData->Pro), pro);*/
+   
 }
 
 // Render the scene.
@@ -875,11 +729,7 @@ void D3DApp::PopulateCommandList()
     m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
     //set cbv table
     m_commandList->SetGraphicsRootDescriptorTable(0, m_cbvHeap->GetGPUDescriptorHandleForHeapStart());
-    //
-    //CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(m_cbvHeap->GetGPUDescriptorHandleForHeapStart(), 1,
-    //    m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
-    ////set srv
-    //m_commandList->SetGraphicsRootDescriptorTable(1, srvHandle);
+   
 
     //set ampler no 2;
     CD3DX12_GPU_DESCRIPTOR_HANDLE hGpusamplerHandle(m_SamplersHeap->GetGPUDescriptorHandleForHeapStart(),
@@ -896,7 +746,7 @@ void D3DApp::PopulateCommandList()
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
     m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 
-
+    
     m_commandList->ExecuteBundle(m_bundle.Get());
 
     // Indicate that the back buffer will now be used to present.
@@ -955,41 +805,4 @@ void D3DApp::MoveToNextFrame()
 
     m_fenceValues[m_frameIndex] = currentFenceValue + 1;
 }
-
-std::vector<UINT8> D3DApp::GenerateTextureData()
-{
-    const UINT rowPitch = m_PicRowPitch;
-    const UINT cellPitch = rowPitch >> 3;        // The width of a cell in the checkboard texture.
-    const UINT cellHeight = m_TextureWidth >> 3;    // The height of a cell in the checkerboard texture.
-    const UINT textureSize = rowPitch * m_TextureHeight;
-
-    std::vector<UINT8> data(textureSize);
-    UINT8* pData = &data[0];
-
-    for (UINT n = 0; n < textureSize; n += m_TexturePixelSize)
-    {
-        UINT x = n % rowPitch;
-        UINT y = n / rowPitch;
-        UINT i = x / cellPitch;
-        UINT j = y / cellHeight;
-
-        if (i % 2 == j % 2)
-        {
-            pData[n] = 0x00;        // R
-            pData[n + 1] = 0x00;    // G
-            pData[n + 2] = 0x00;    // B
-            pData[n + 3] = 0xff;    // A
-        }
-        else
-        {
-            pData[n] = 0xff;        // R
-            pData[n + 1] = 0xff;    // G
-            pData[n + 2] = 0xff;    // B
-            pData[n + 3] = 0xff;    // A
-        }
-    }
-
-    return data;
-}
-
 

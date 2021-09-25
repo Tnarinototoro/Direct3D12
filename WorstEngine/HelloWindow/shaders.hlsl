@@ -1,40 +1,38 @@
-//*********************************************************
-//
-// Copyright (c) Microsoft. All rights reserved.
-// This code is licensed under the MIT License (MIT).
-// THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF
-// ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY
-// IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR
-// PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
-//
-//*********************************************************
-
-cbuffer SceneConstantBuffer : register(b0)
-{
-    float4 offset;
-    float4 padding[15];
-};
 
 struct PSInput
 {
-    float4 position : SV_POSITION;
-    float2 uv : TEXCOORD;
+	float4 position : SV_POSITION;
+	float2 uv : TEXCOORD;
 };
+
+cbuffer MVPBuffer : register(b0)
+{
+	matrix World;
+	matrix View;
+	matrix Pro;
+};
+
 
 Texture2D g_texture : register(t0);
 SamplerState g_sampler : register(s0);
 
 PSInput VSMain(float4 position : POSITION, float2 uv : TEXCOORD)
 {
-    PSInput result;
+	PSInput result;
+	float4 pos = position;
 
-    result.position = position + offset;
-    result.uv = uv;
+	// Transform the position from object space to homogeneous projection space
+	pos = mul(World, pos);
+	pos = mul(View, pos);
+	pos = mul(Pro, pos);
 
-    return result;
+	result.position = pos;
+	result.uv = uv;
+
+	return result;
 }
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-    return g_texture.Sample(g_sampler, input.uv);
+	return g_texture.Sample(g_sampler, input.uv);
 }

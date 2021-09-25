@@ -12,7 +12,9 @@
 #pragma once
 
 #include "DXSample.h"
-#include <wincodec.h>
+#include "TextureDataLoader.h"
+
+class TextureDataLoader;
 
 
 
@@ -21,13 +23,6 @@
 
 
 
-using namespace DirectX;
-// Note that while ComPtr is used to manage the lifetime of resources on the CPU,
-// it has no understanding of the lifetime of resources on the GPU. Apps must account
-// for the GPU lifetime of resources to avoid destroying objects that may still be
-// referenced by the GPU.
-// An example of this can be found in the class method: OnDestroy().
-using Microsoft::WRL::ComPtr;
 
 class D3DApp : public DXSample
 {
@@ -41,26 +36,22 @@ public:
 
 private:
     static const UINT FrameCount = 4;
-    UINT m_TextureWidth;
-    UINT m_TextureHeight;
-    UINT m_TexturePixelSize;    // The number of bytes used to represent a pixel in the texture.
-    UINT m_PicRowPitch;
     static const UINT nSampleMaxCnt = 5;
    
     struct Vertex
     {
         XMFLOAT3 position;
         XMFLOAT2 uv;
+        XMFLOAT3 n;
 
     };
-    struct SceneConstantBuffer
 
+    struct MVP_BUFFER
     {
-
-        XMFLOAT4 offset;
-
-        float padding[60]; // 256字节对齐
-
+      
+        XMMATRIX World;
+        XMMATRIX View;
+        XMMATRIX Pro;			//经典的Model-view-projection(MVP)矩阵.
     };
 
 
@@ -96,7 +87,7 @@ private:
     ComPtr<ID3D12DescriptorHeap> m_SamplersHeap;
     //pipeline state object
     ComPtr<ID3D12PipelineState> m_pipelineState;
-    
+    TextureDataLoader* Loader;
 
     //signature
     ComPtr<ID3D12RootSignature> m_rootSignature;
@@ -106,6 +97,11 @@ private:
     UINT m_rtvDescriptorSize;
     UINT m_samplerDescriptorSize;
 
+    XMVECTOR Eye;
+    XMVECTOR At;
+    XMVECTOR Up;
+
+    double fPalstance;	//物体旋转的角速度，单位：弧度/秒
 
 
 
@@ -120,16 +116,25 @@ private:
 
     //App resources and relatives
     ComPtr<ID3D12Resource> m_vertexBuffer;
+    ComPtr<ID3D12Resource> m_IndexBuffer;
     D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-    ComPtr<ID3D12Resource> m_constantBuffer;
-    ComPtr<ID3D12Resource> m_texture;
-    SceneConstantBuffer m_constantBufferData;
-    UINT8* m_pCbvDataBegin;
+    D3D12_INDEX_BUFFER_VIEW m_IndexBufferView;
+    ComPtr<ID3D12Resource> m_constantBufferUpload;
+
+    MVP_BUFFER* MVPBufferData;
+    SIZE_T szMVPBuffer;
+   
+    UINT m_nInstance;
+    ULONGLONG n64tmFrameStart;
+    ULONGLONG n64tmCurrent;
+    double dModelRotationYAngle;
+    double dModelRotationXAngle;
+    double dModelRotationZAngle;
 
     void LoadPipeline();
     void LoadAssets();
     void PopulateCommandList();
     void WaitForGPU();
     void MoveToNextFrame();
-    std::vector<UINT8> GenerateTextureData();
+
 };
