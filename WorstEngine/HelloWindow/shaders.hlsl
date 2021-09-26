@@ -26,6 +26,11 @@ PSInput VSMain(float4 position : POSITION, float2 uv : TEXCOORD)
 	pos = mul(View, pos);
 	pos = mul(Pro, pos);
 
+	/*pos = mul(pos,transpose(World));
+	pos = mul(pos, transpose(View));
+	pos = mul(pos, transpose(Pro));*/
+
+
 	result.position = pos;
 	result.uv = uv;
 

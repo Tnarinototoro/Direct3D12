@@ -29,7 +29,8 @@ D3DApp::D3DApp(UINT width, UINT height, std::wstring name) :
     n64tmFrameStart(::GetTickCount64()),
     dModelRotationYAngle(0.0f),
     dModelRotationXAngle(0.0f),
-    dModelRotationZAngle(0.0f)
+    dModelRotationZAngle(0.0f),
+    MVPBufferData(nullptr)
 {
     n64tmCurrent = n64tmFrameStart;
 }
@@ -673,12 +674,12 @@ void D3DApp::OnUpdate()
 
     //Í¶Ó°¾ØÕó projection
     XMMATRIX pro = XMMatrixPerspectiveFovLH(XM_PIDIV4, (FLOAT)m_width / (FLOAT)m_height, 0.1f, 1000.0f);
-    MVPBufferData->World = xmRot;
+   /* MVPBufferData->World = xmRot;
     MVPBufferData->View = view;
-    MVPBufferData->Pro = pro;
-    //XMStoreFloat4x4(&(MVPBufferData->World), xmRot);
-    /*XMStoreFloat4x4(&(MVPBufferData->View), view);
-    XMStoreFloat4x4(&(MVPBufferData->Pro), pro);*/
+    MVPBufferData->Pro = pro;*/
+    XMStoreFloat4x4(&MVPBufferData->World, xmRot);
+    XMStoreFloat4x4(&MVPBufferData->View, view);
+    XMStoreFloat4x4(&MVPBufferData->Pro, pro);
    
 }
 

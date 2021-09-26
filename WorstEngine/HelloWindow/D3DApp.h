@@ -49,9 +49,9 @@ private:
     struct MVP_BUFFER
     {
       
-        XMMATRIX World;
-        XMMATRIX View;
-        XMMATRIX Pro;			//经典的Model-view-projection(MVP)矩阵.
+        XMFLOAT4X4 World;
+        XMFLOAT4X4 View;
+        XMFLOAT4X4 Pro;			//经典的Model-view-projection(MVP)矩阵.
     };
 
 
