@@ -33,7 +33,7 @@ public:
     UINT GetWidth() const           { return m_width; }
     UINT GetHeight() const          { return m_height; }
     const WCHAR* GetTitle() const   { return m_title.c_str(); }
-
+    void SetcommandLines(LPWSTR* commandline, int nArgs);
     void ParseCommandLineArgs(_In_reads_(argc) WCHAR* argv[], int argc);
 
 protected:
@@ -53,11 +53,12 @@ protected:
 
     // Adapter info.
     bool m_useWarpDevice;
-
+    LPWSTR* m_Commands;
+    int m_nArgs;
 private:
     // Root assets path.
     std::wstring m_assetsPath;
-
+   
     // Window title.
     std::wstring m_title;
 };

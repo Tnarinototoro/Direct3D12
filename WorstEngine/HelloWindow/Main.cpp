@@ -15,6 +15,16 @@
 _Use_decl_annotations_
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 {
+    int line;
+    auto filename=CommandLineToArgvW(GetCommandLineW(),&line);
+    /*0---exe path
+    1---firtst parameter */
+
+    //for(int i=0;i<line;i++)
+    //MessageBox(0,filename[1], L"2333", 0);
     D3DApp sample(1280, 720, L"D3D12 Hello Window");
+    sample.SetcommandLines(filename, line);
     return Win32Application::Run(&sample, hInstance, nCmdShow);
+   
+    
 }

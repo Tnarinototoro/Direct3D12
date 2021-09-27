@@ -6,7 +6,7 @@
 class TextureDataLoader
 {
     bool GetTargetPixelFormat(const GUID* pSourceFormat, GUID* pTargetFormat);
-
+    void* GetPixelData(UINT m_uploadBufferSize);
     DXGI_FORMAT GetDXGIFormatFromPixelFormat(const GUID* pPixelFormat);
 public:
     UINT m_TextureWidth;
@@ -28,7 +28,7 @@ public:
     TextureDataLoader(UINT SlotNumer, UINT SlotOffSet);
 
     void ReadTheTextureDataFromFile(LPCWSTR Filename);
-    void* GetPixelData(UINT m_uploadBufferSize);
+   
     void UploadAndConnectResource(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
         ID3D12DescriptorHeap* heap,
         ID3D12CommandQueue* commandQueue

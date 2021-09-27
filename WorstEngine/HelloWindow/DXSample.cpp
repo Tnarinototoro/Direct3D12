@@ -114,6 +114,11 @@ void DXSample::SetCustomWindowText(LPCWSTR text)
 
 // Helper function for parsing any supplied command line args.
 _Use_decl_annotations_
+void DXSample::SetcommandLines(LPWSTR* commandline, int nArgs)
+{
+    m_Commands = commandline;
+    m_nArgs = nArgs;
+}
 void DXSample::ParseCommandLineArgs(WCHAR* argv[], int argc)
 {
     for (int i = 1; i < argc; ++i)

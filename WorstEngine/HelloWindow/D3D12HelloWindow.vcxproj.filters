@@ -27,7 +27,9 @@
     <ClInclude Include="Win32Application.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="TextureDataLoader.h" />
+    <ClInclude Include="TextureDataLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -45,6 +47,8 @@
     <ClCompile Include="Win32Application.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TextureDataLoader.cpp" />
+    <ClCompile Include="TextureDataLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

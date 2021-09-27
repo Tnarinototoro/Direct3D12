@@ -39,7 +39,6 @@ TextureDataLoader::TextureDataLoader(UINT HeapOffset, UINT TableOffset)
 
 void TextureDataLoader::ReadTheTextureDataFromFile(LPCWSTR Filename)
 {
-    //---------------------------------------------------------------------------------------------
     //使用纯COM方式创建WIC类厂对象，也是调用WIC第一步要做的事情
     ThrowIfFailed(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pIWICFactory)));
 
@@ -49,7 +48,7 @@ void TextureDataLoader::ReadTheTextureDataFromFile(LPCWSTR Filename)
     std::wstring str = assetsPath;
     
     ThrowIfFailed(pIWICFactory->CreateDecoderFromFilename(
-        (str+Filename).c_str(),              // 文件名
+        Filename,              // 文件名
         NULL,                            // 不指定解码器，使用默认
         GENERIC_READ,                    // 访问权限
         WICDecodeMetadataCacheOnDemand,  // 若需要就缓冲数据 

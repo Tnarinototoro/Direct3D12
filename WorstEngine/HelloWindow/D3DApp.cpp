@@ -519,7 +519,8 @@ void D3DApp::LoadAssets()
     //create the texture
     {
         Loader = new TextureDataLoader(0, 1);
-        Loader->ReadTheTextureDataFromFile(L"flower.jpg");
+        
+        Loader->ReadTheTextureDataFromFile(m_Commands[1]);
         Loader->UploadAndConnectResource(m_device.Get(), m_commandList.Get(), m_cbvHeap.Get(), m_commandQueue.Get());
     }
     
@@ -680,6 +681,7 @@ void D3DApp::OnUpdate()
     XMStoreFloat4x4(&MVPBufferData->World, xmRot);
     XMStoreFloat4x4(&MVPBufferData->View, view);
     XMStoreFloat4x4(&MVPBufferData->Pro, pro);
+ 
    
 }
 
