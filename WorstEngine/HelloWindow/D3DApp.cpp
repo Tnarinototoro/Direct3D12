@@ -727,7 +727,7 @@ void D3DApp::PopulateCommandList()
     m_commandList->RSSetViewports(1, &m_viewportRect);
     m_commandList->RSSetScissorRects(1, &m_scissorRect);
     //把cbv_heap设置为当前使用的descriptor heap
-    ID3D12DescriptorHeap* ppHeaps[] = { m_cbvHeap.Get(),m_SamplersHeap.Get()};
+    ID3D12DescriptorHeap* ppHeaps[] = { m_SamplersHeap.Get(), m_cbvHeap.Get()};
 
     m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
     //set cbv table
