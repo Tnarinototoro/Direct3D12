@@ -1,4 +1,9 @@
 #pragma once
+#ifndef TEXTUREDATALOADER_H
+#define TEXTUREDATALOADER_H
+#endif // !TEXTUREDATALOADER_H
+
+
 #include"stdafx.h"
 #include "DXSampleHelper.h"
 

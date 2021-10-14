@@ -10,6 +10,10 @@
 //*********************************************************
 
 #pragma once
+#ifndef DXSAMPLE_H
+#define DXSAMPLE_H
+#endif // !DXSAMPLE_H
+
 
 #include "DXSampleHelper.h"
 #include "Win32Application.h"

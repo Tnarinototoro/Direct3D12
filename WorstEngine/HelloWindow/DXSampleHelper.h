@@ -11,6 +11,10 @@
 
 #pragma once
 #include <stdexcept>
+#ifndef DXSAMPLERHELPER_H
+#define DXSAMPLERHELPER_H
+#endif // DXSAMPLERHELPER_H
+
 
 // Note that while ComPtr is used to manage the lifetime of resources on the CPU,
 // it has no understanding of the lifetime of resources on the GPU. Apps must account

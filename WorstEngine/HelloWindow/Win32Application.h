@@ -10,6 +10,10 @@
 //*********************************************************
 
 #pragma once
+#ifndef WIN32APPLICATION_H
+#define WIN32APPLICATION_H
+#endif // !WIN32APPLICATION_H
+
 #include "stdafx.h"
 #include "DXSample.h"
 

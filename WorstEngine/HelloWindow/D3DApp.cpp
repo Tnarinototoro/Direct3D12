@@ -11,7 +11,7 @@
 
 #include "stdafx.h"
 #include "D3DApp.h"
-
+#include "TextureDataLoader.h"
 
 
 D3DApp::D3DApp(UINT width, UINT height, std::wstring name) :

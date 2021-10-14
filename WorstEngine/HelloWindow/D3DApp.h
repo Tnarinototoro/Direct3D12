@@ -10,9 +10,12 @@
 //*********************************************************
 
 #pragma once
+#ifndef D3DAPP_H
+#define D3DAPP_H
+#endif // !D3DAPP_H
 
 #include "DXSample.h"
-#include "TextureDataLoader.h"
+
 
 class TextureDataLoader;
 

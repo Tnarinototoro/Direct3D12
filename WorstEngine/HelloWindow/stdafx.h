@@ -19,6 +19,10 @@
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
 #endif
 
+#ifndef STDAFX_H
+#define STDAFX_H
+#endif // !STDAFX_H
+
 #include <windows.h>
 #include <initguid.h>
 #include <d3d12.h>
