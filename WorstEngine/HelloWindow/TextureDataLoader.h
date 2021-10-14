@@ -13,7 +13,7 @@ class TextureDataLoader
     bool GetTargetPixelFormat(const GUID* pSourceFormat, GUID* pTargetFormat);
     void* GetPixelData(UINT m_uploadBufferSize);
     DXGI_FORMAT GetDXGIFormatFromPixelFormat(const GUID* pPixelFormat);
-public:
+protected:
     UINT m_TextureWidth;
     UINT m_TextureHeight;
     UINT m_TexturePixelSize;    // The number of bytes used to represent a pixel in the texture.
@@ -28,6 +28,8 @@ public:
 
     ComPtr<ID3D12Resource> textureUploadHeap;
     ComPtr<ID3D12Resource> m_texture;
+public:
+
 
     
     TextureDataLoader(UINT SlotNumer, UINT SlotOffSet);
